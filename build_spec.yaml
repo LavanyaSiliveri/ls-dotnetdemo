@@ -1,0 +1,54 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      dotnet: 3.1
+
+  pre_build:
+    commands:
+      - echo Restore started on `date`
+      - dotnet restore
+
+  build:
+    commands:
+      - echo Build started on `date`
+      - dotnet build -c Release
+
+  post_build:
+    commands:
+      - echo Post-build started on `date`
+      - dotnet publish -c Release -o build-dotnet-service
+      - cp Program.cs build-dotnet-service/
+      - cp dotnetapp.csproj build-dotnet-service/
+      - mkdir -p deployment
+      - cp build-dotnet-service/dotnetapp.dll deployment/
+      - echo Creating Kubernetes manifest
+      - echo "apiVersion: apps/v1" > deployment/dotnet.yaml
+      - echo "kind: Deployment" >> deployment/dotnet.yaml
+      - echo "metadata:" >> deployment/dotnet.yaml
+      - echo "  name: dotnet-app" >> deployment/dotnet.yaml
+      - echo "spec:" >> deployment/dotnet.yaml
+      - echo "  replicas: 1" >> deployment/dotnet.yaml
+      - echo "  selector:" >> deployment/dotnet.yaml
+      - echo "    matchLabels:" >> deployment/dotnet.yaml
+      - echo "      app: dotnet-app" >> deployment/dotnet.yaml
+      - echo "  template:" >> deployment/dotnet.yaml
+      - echo "    metadata:" >> deployment/dotnet.yaml
+      - echo "      labels:" >> deployment/dotnet.yaml
+      - echo "        app: dotnet-app" >> deployment/dotnet.yaml
+      - echo "    spec:" >> deployment/dotnet.yaml
+      - echo "      containers:" >> deployment/dotnet.yaml
+      - echo "      - name: dotnet-app" >> deployment/dotnet.yaml
+      - echo "        image: <DOCKER_IMAGE_URL>" >> deployment/dotnet.yaml
+      - echo "        ports:" >> deployment/dotnet.yaml
+      - echo "        - containerPort: 80" >> deployment/dotnet.yaml
+
+artifacts:
+  - name: ls-devops-dotnet-image
+    type: DOCKER_IMAGE
+    location: build-dotnet-service
+
+  - name: ls-devops-dotnet-kube-manifest
+    type: BINARY
+    location: deployment/dotnet.yaml
